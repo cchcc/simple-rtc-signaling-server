@@ -1,0 +1,42 @@
+group 'cchcc'
+version '0.1'
+
+buildscript {
+    ext.kotlin_version = '1.0.4'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Manifest-Version': version,
+                'Main-Class': 'io.vertx.core.Launcher',
+                'Main-Verticle': 'cchcc.MainVerticle'
+    }
+    baseName = project.name + '-fat-runnable'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+//    exclude ("**/config.json")
+    with jar
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile "io.vertx:vertx-core:3.3.3"
+    compile "io.vertx:vertx-rx-java:3.3.3"
+    compile "io.vertx:vertx-web:3.3.3"
+}
