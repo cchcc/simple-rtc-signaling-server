@@ -1,20 +1,15 @@
 package cchcc.ext
 
 import cchcc.model.SignalMessage
-import io.vertx.rxjava.core.buffer.Buffer
 import io.vertx.core.json.DecodeException
-import io.vertx.core.json.JsonObject
+import io.vertx.core.json.Json
+import io.vertx.rxjava.core.buffer.Buffer
 
-fun SignalMessage.toJson() = JsonObject(toMap())
 
-fun String.toSignalMessage(): SignalMessage? = try {
-    SignalMessage.fromMap(JsonObject(this).map)
-} catch (e: DecodeException) {
-    null
-}
+fun SignalMessage.toJsonString() = Json.encode(this)!!
 
 fun Buffer.toSignalMessage(): SignalMessage? = try {
-    SignalMessage.fromMap(toJsonObject().map)
+    SignalMessage.from(toJsonObject().map)
 } catch (e: DecodeException) {
     null
 }

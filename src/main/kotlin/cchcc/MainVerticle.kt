@@ -5,6 +5,7 @@ import cchcc.model.RTCPeer
 import cchcc.model.RTCRoom
 import cchcc.model.SignalMessage
 import io.vertx.core.Future
+import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.Logger
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.rxjava.core.AbstractVerticle
@@ -51,12 +52,12 @@ class MainVerticle() : AbstractVerticle() {
                 room.remove(peer)
                 rooms.remove(room.name)
             }
-            peer.websocketSubscription?.unsubscribe()
+            peer.webSocketSubscription?.unsubscribe()
             peer.closeWebSocket()
             logger.info(log)
         }
 
-        peer.websocketSubscription = webSocket.toObservable().subscribe(received@ {
+        peer.webSocketSubscription = webSocket.toObservable().subscribe(received@ {
             logger.info("$peerAddress received : $it")
 
             val msg = it.toSignalMessage()
@@ -80,6 +81,14 @@ class MainVerticle() : AbstractVerticle() {
                         peer.send(SignalMessage.roomCreated(msg.name))
                     }
                 }
+                is SignalMessage.chat
+                , is SignalMessage.rtcAnswer
+                , is SignalMessage.rtcOffer
+                , is SignalMessage.rtcCandidate -> {
+                    // 위 메세지들은 상대에게 그냥 받은 그대로 전달하면 되므로
+                    // 사실 msg 를 클래스 인스턴스로 변환하지 않고 type 값만 확인해서 바로 보내는게 효율적이긴 함.
+                    peer.room?.opponentsOf(peer)?.send(msg)
+                }
                 else -> closePeerWithLog("$peerAddress is closed by not specified message")
             }
         }, error@ {
@@ -88,6 +97,6 @@ class MainVerticle() : AbstractVerticle() {
             peer.isClosed = true
             closePeerWithLog("$peerAddress is closed")
         })
-
+        JsonObject()
     }
 }

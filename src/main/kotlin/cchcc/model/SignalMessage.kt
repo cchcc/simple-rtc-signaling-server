@@ -1,52 +1,45 @@
 package cchcc.model
 
-sealed class SignalMessage(val fn: String) {
+sealed class SignalMessage(val type: String) {
 
-    open val o: Map<String, Any?> = emptyMap()
+    class room(val name: String) : SignalMessage("room")
 
-    fun toMap() = mapOf("fn" to fn, "o" to o)
+    class roomCreated(val name: String) : SignalMessage("roomCreated")
 
-    operator fun component1() = fn
-    operator fun component2() = o
+    class roomJoined(val name: String) : SignalMessage("roomJoined")
 
-    override fun toString(): String = toMap().toString()
+    class startAsCaller(val ice: List<ICEServer>) : SignalMessage("startAsCaller")
+
+    class startAsCallee(val ice: List<ICEServer>) : SignalMessage("startAsCallee")
+
+    class chat(val message: String) : SignalMessage("chat")
+
+    class rtcOffer() : SignalMessage("rtcOffer")
+
+    class rtcAnswer() : SignalMessage("rtcAnswer")
+
+    class rtcCandidate() : SignalMessage("rtcCandidate")
 
     companion object {
-        fun fromMap(map: Map<String, Any?>): SignalMessage? = try {
-            val fn = map["fn"] as String
-            @Suppress("UNCHECKED_CAST")
-            val o = map["o"] as Map<String, Any?>
 
-            when (fn) {
-                "room" -> room(o["name"] as String)
-                "roomCreated" -> roomCreated(o["name"] as String)
-                "roomJoined" -> roomJoined(o["name"] as String)
-                "startAsCaller" -> startAsCaller(o["ice"] as String)
-                "startAsCallee" -> startAsCallee(o["ice"] as String)
+        @Suppress("UNCHECKED_CAST")
+        fun from(map: Map<String, Any?>): SignalMessage? = try {
+            val type = map["type"] as String
+
+            when (type) {
+                "room" -> room(map["name"] as String)
+                "roomCreated" -> roomCreated(map["name"] as String)
+                "roomJoined" -> roomJoined(map["name"] as String)
+                "startAsCaller" -> startAsCaller(map["ice"] as List<ICEServer>)
+                "startAsCallee" -> startAsCallee(map["ice"] as List<ICEServer>)
+                "chat" -> chat(map["message"] as String)
+                "rtcOffer" -> rtcOffer()
+                "rtcAnswer" -> rtcAnswer()
+                "rtcCandidate" -> rtcCandidate()
                 else -> null
             }
         } catch (e: Exception) {
             null
         }
-    }
-
-    class room(val name: String) : SignalMessage("room") {
-        override val o: Map<String, Any?> get() = mapOf("name" to name)
-    }
-
-    class roomCreated(val name: String) : SignalMessage("roomCreated") {
-        override val o: Map<String, Any?> get() = mapOf("name" to name)
-    }
-
-    class roomJoined(val name: String) : SignalMessage("roomJoined") {
-        override val o: Map<String, Any?> get() = mapOf("name" to name)
-    }
-
-    class startAsCaller(val ice: String) : SignalMessage("startAsCaller") {
-        override val o: Map<String, Any?> get() = mapOf("ice" to ice)
-    }
-
-    class startAsCallee(val ice: String) : SignalMessage("startAsCallee") {
-        override val o: Map<String, Any?> get() = mapOf("ice" to ice)
     }
 }
