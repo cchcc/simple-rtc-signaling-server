@@ -8,6 +8,8 @@ sealed class SignalMessage(val type: String) {
 
     class roomJoined(val name: String) : SignalMessage("roomJoined")
 
+    class roomIsFull(val name: String) : SignalMessage("roomIsFull")
+
     class startAsCaller(val ice: List<ICEServer>) : SignalMessage("startAsCaller")
 
     class startAsCallee(val ice: List<ICEServer>) : SignalMessage("startAsCallee")
@@ -30,8 +32,9 @@ sealed class SignalMessage(val type: String) {
                 "room" -> room(map["name"] as String)
                 "roomCreated" -> roomCreated(map["name"] as String)
                 "roomJoined" -> roomJoined(map["name"] as String)
-                "startAsCaller" -> startAsCaller(map["ice"] as List<ICEServer>)
-                "startAsCallee" -> startAsCallee(map["ice"] as List<ICEServer>)
+                "roomIsFull" -> roomIsFull(map["name"] as String)
+                "startAsCaller" -> startAsCaller((map["ice"] as List<Map<String, String>>).map(::ICEServer))
+                "startAsCallee" -> startAsCallee((map["ice"] as List<Map<String, String>>).map(::ICEServer))
                 "chat" -> chat(map["message"] as String)
                 "rtcOffer" -> rtcOffer()
                 "rtcAnswer" -> rtcAnswer()

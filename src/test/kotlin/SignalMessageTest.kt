@@ -1,13 +1,15 @@
 import cchcc.ext.toJsonString
 import cchcc.ext.toSignalMessage
+import cchcc.model.ICEServer
 import cchcc.model.SignalMessage
 import io.vertx.rxjava.core.buffer.Buffer
 import org.junit.Assert
 import org.junit.Test
 
-class UnitTest {
+class SignalMessageTest {
+
     @Test
-    fun test_SignalMessage() {
+    fun parse() {
 
         val jsonString = """{"type":"room","name":"abc"}"""
 
@@ -19,7 +21,16 @@ class UnitTest {
         // 조만간 sealed class 도 data sealed class 도 되도록 나오겠지...
 
         Assert.assertEquals(SignalMessage.room("abc").toJsonString()
-                            ,Buffer.buffer(jsonString).toSignalMessage()?.toJsonString())
+                            , Buffer.buffer(jsonString).toSignalMessage()?.toJsonString())
+
+        val s = """{"type":"startAsCaller","ice":[{"uri":"stun:192.168.0.10:3478","username":"myid","password":"mypw"},{"uri":"turn:192.168.0.10:3478","username":"myid","password":"mypw"}]}"""
+        Assert.assertEquals(
+        SignalMessage.startAsCaller(listOf(ICEServer.create("stun:192.168.0.10:3478", "myid", "mypw")
+                , ICEServer.create("turn:192.168.0.10:3478", "myid", "mypw")))
+                .toJsonString(),s)
+
+        val msg = s.toSignalMessage()
+        println(msg?.toJsonString())
 
     }
 }
