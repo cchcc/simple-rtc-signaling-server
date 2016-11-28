@@ -5,7 +5,6 @@ import cchcc.model.RTCPeer
 import cchcc.model.RTCRoom
 import cchcc.model.SignalMessage
 import io.vertx.core.Future
-import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.Logger
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.rxjava.core.AbstractVerticle
@@ -97,6 +96,6 @@ class MainVerticle() : AbstractVerticle() {
             peer.isClosed = true
             closePeerWithLog("$peerAddress is closed")
         })
-        JsonObject()
+
     }
 }
