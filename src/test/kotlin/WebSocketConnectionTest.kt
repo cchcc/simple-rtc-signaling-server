@@ -1,3 +1,4 @@
+import base.latch
 import cchcc.MainVerticle
 import cchcc.ext.toJsonString
 import cchcc.ext.toSignalMessage
@@ -35,122 +36,122 @@ class WebSocketConnectionTest {
 
     @Test
     fun connectWebSocketClient() {
-        val latch = CountDownLatch(1)
+        latch(5000) {
 
-        WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                .enqueue(object : WebSocketListener {
-                    var callerWs: WebSocket? = null
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        println("onOpen : $webSocket : $response")
-                        callerWs = webSocket
-                        webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc").toJsonString()))
-                    }
+            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
+                    .enqueue(object : WebSocketListener {
+                        var callerWs: WebSocket? = null
+                        override fun onOpen(webSocket: WebSocket, response: Response) {
+                            println("onOpen : $webSocket : $response")
+                            callerWs = webSocket
+                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc").toJsonString()))
+                        }
 
-                    override fun onPong(payload: okio.Buffer?) {
-                    }
+                        override fun onPong(payload: okio.Buffer?) {
+                        }
 
-                    override fun onClose(code: Int, reason: String?) {
-                        println("onClosed : $code : $reason")
-                    }
+                        override fun onClose(code: Int, reason: String?) {
+                            println("onClosed : $code : $reason")
+                        }
 
-                    override fun onFailure(e: IOException?, response: Response?) {
-                        println("onFailure : $e : $response")
-                        Assert.fail(e?.message)
-                    }
+                        override fun onFailure(e: IOException?, response: Response?) {
+                            println("onFailure : $e : $response")
+                            Assert.fail(e?.message)
+                        }
 
-                    override fun onMessage(resBody: ResponseBody?) {
-                        val msgString = resBody?.string() ?: ""
-                        println("onMessage : $msgString")
+                        override fun onMessage(resBody: ResponseBody?) {
+                            val msgString = resBody?.string() ?: ""
+                            println("onMessage : $msgString")
 
-                        val msg = msgString.toSignalMessage() as SignalMessage.roomCreated
-                        Assert.assertEquals("abc", msg.name)
-                        callerWs?.close(1000, "")
-                        latch.countDown()
-                    }
-                })
+                            val msg = msgString.toSignalMessage() as SignalMessage.roomCreated
+                            Assert.assertEquals("abc", msg.name)
+                            callerWs?.close(1000, "")
+                            countDown()
+                        }
+                    })
 
-        latch.await(5, TimeUnit.SECONDS)
+        }
     }
 
     @Test
     fun chat() {
-        val latch = CountDownLatch(1)
+        latch(5000) {
 
-        WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                .enqueue(object : WebSocketListener {
-                    var callerWs: WebSocket? = null
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        println("1onOpen : $webSocket : $response")
-                        callerWs = webSocket
-                        webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
-                    }
+            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
+                    .enqueue(object : WebSocketListener {
+                        var callerWs: WebSocket? = null
+                        override fun onOpen(webSocket: WebSocket, response: Response) {
+                            println("1onOpen : $webSocket : $response")
+                            callerWs = webSocket
+                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
+                        }
 
-                    override fun onPong(payload: okio.Buffer?) {
-                    }
+                        override fun onPong(payload: okio.Buffer?) {
+                        }
 
-                    override fun onClose(code: Int, reason: String?) {
-                        println("1onClosed : $code : $reason")
-                    }
+                        override fun onClose(code: Int, reason: String?) {
+                            println("1onClosed : $code : $reason")
+                        }
 
-                    override fun onFailure(e: IOException?, response: Response?) {
-                        println("1onFailure : $e : $response")
-                        Assert.fail(e?.message)
-                    }
+                        override fun onFailure(e: IOException?, response: Response?) {
+                            println("1onFailure : $e : $response")
+                            Assert.fail(e?.message)
+                        }
 
-                    override fun onMessage(resBody: ResponseBody?) {
-                        val msgString = resBody?.string() ?: ""
-                        println("1onMessage : $msgString")
+                        override fun onMessage(resBody: ResponseBody?) {
+                            val msgString = resBody?.string() ?: ""
+                            println("1onMessage : $msgString")
 
-                        val msg = msgString.toSignalMessage()
-                        when (msg) {
-                            is SignalMessage.startAsCaller -> {
-                                callerWs!!.sendMessage(
-                                        RequestBody.create(WebSocket.TEXT, SignalMessage.chat("hi").toJsonString())
-                                )
-                                callerWs!!.close(1000, "")
+                            val msg = msgString.toSignalMessage()
+                            when (msg) {
+                                is SignalMessage.startAsCaller -> {
+                                    callerWs!!.sendMessage(
+                                            RequestBody.create(WebSocket.TEXT, SignalMessage.chat("hi").toJsonString())
+                                    )
+                                    callerWs!!.close(1000, "")
+                                }
                             }
                         }
-                    }
-                })
+                    })
 
-        Thread.sleep(500)
+            Thread.sleep(500)
 
-        WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                .enqueue(object : WebSocketListener {
-                    var callerWs: WebSocket? = null
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        println("2onOpen : $webSocket : $response")
-                        callerWs = webSocket
-                        webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
-                    }
+            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
+                    .enqueue(object : WebSocketListener {
+                        var callerWs: WebSocket? = null
+                        override fun onOpen(webSocket: WebSocket, response: Response) {
+                            println("2onOpen : $webSocket : $response")
+                            callerWs = webSocket
+                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
+                        }
 
-                    override fun onPong(payload: okio.Buffer?) {
-                    }
+                        override fun onPong(payload: okio.Buffer?) {
+                        }
 
-                    override fun onClose(code: Int, reason: String?) {
-                        println("2onClosed : $code : $reason")
-                    }
+                        override fun onClose(code: Int, reason: String?) {
+                            println("2onClosed : $code : $reason")
+                        }
 
-                    override fun onFailure(e: IOException?, response: Response?) {
-                        println("2onFailure : $e : $response")
-                        Assert.fail(e?.message)
-                    }
+                        override fun onFailure(e: IOException?, response: Response?) {
+                            println("2onFailure : $e : $response")
+                            Assert.fail(e?.message)
+                        }
 
-                    override fun onMessage(resBody: ResponseBody?) {
-                        val msgString = resBody?.string() ?: ""
-                        println("2onMessage : $msgString")
+                        override fun onMessage(resBody: ResponseBody?) {
+                            val msgString = resBody?.string() ?: ""
+                            println("2onMessage : $msgString")
 
-                        val msg = msgString.toSignalMessage()
-                        when (msg) {
-                            is SignalMessage.chat -> {
-                                Assert.assertEquals(msg.message, "hi")
-                                callerWs!!.close(1000, "")
-                                latch.countDown()
+                            val msg = msgString.toSignalMessage()
+                            when (msg) {
+                                is SignalMessage.chat -> {
+                                    Assert.assertEquals(msg.message, "hi")
+                                    callerWs!!.close(1000, "")
+                                    countDown()
+                                }
                             }
                         }
-                    }
-                })
+                    })
 
-        latch.await(5, TimeUnit.SECONDS)
+        }
     }
 }
