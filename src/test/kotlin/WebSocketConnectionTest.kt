@@ -1,4 +1,3 @@
-import base.latch
 import cchcc.MainVerticle
 import cchcc.ext.toJsonString
 import cchcc.ext.toSignalMessage
@@ -13,7 +12,6 @@ import okhttp3.ws.WebSocketListener
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 @RunWith(VertxUnitRunner::class)
