@@ -5,13 +5,15 @@ import cchcc.model.SignalMessage
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.rxjava.core.Vertx
-import okhttp3.*
-import okhttp3.ws.WebSocket
-import okhttp3.ws.WebSocketCall
-import okhttp3.ws.WebSocketListener
-import org.junit.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okio.ByteString
+import org.junit.AfterClass
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 @RunWith(VertxUnitRunner::class)
@@ -21,135 +23,138 @@ class WebSocketConnectionTest {
     private val okHttpClient = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
 
     companion object {
-        @BeforeClass @JvmStatic
+        @BeforeClass
+        @JvmStatic
         fun beforeClass(context: TestContext) {
             Vertx.vertx().deployVerticle(MainVerticle::class.java.name, context.asyncAssertSuccess())
         }
 
-        @AfterClass @JvmStatic
+        @AfterClass
+        @JvmStatic
         fun afterClass(context: TestContext) {
             Vertx.vertx().close(context.asyncAssertSuccess())
         }
     }
 
     @Test
-    fun connectWebSocketClient() {
-        latch(5000) {
+    fun createRoom() {
+        latch(1, 5000) {
 
-            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                    .enqueue(object : WebSocketListener {
-                        var callerWs: WebSocket? = null
-                        override fun onOpen(webSocket: WebSocket, response: Response) {
-                            println("onOpen : $webSocket : $response")
-                            callerWs = webSocket
-                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc").toJsonString()))
-                        }
+            okHttpClient.newWebSocket(Request.Builder().url(url).build(), object : okhttp3.WebSocketListener() {
+                override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
+                    println("onOpen : $webSocket : $response")
+                    webSocket.send(SignalMessage.room("abc").toJsonString())
+                }
 
-                        override fun onPong(payload: okio.Buffer?) {
-                        }
+                override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                    println("onMessage 0x1 text:$text")
+                    val msg = text.toSignalMessage() as SignalMessage.roomCreated
+                    Assert.assertEquals("abc", msg.name)
+                    webSocket.close(1000, "")
+                    countDown()
+                }
 
-                        override fun onClose(code: Int, reason: String?) {
-                            println("onClosed : $code : $reason")
-                        }
+                override fun onMessage(webSocket: okhttp3.WebSocket, bytes: ByteString) {
+                    println("onMessage 0x2 bytes:$bytes")
+                }
 
-                        override fun onFailure(e: IOException?, response: Response?) {
-                            println("onFailure : $e : $response")
-                            Assert.fail(e?.message)
-                        }
+                override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("onClosing code:$code, reason:$reason")
+                    webSocket.close(1000, null)
+                }
 
-                        override fun onMessage(resBody: ResponseBody?) {
-                            val msgString = resBody?.string() ?: ""
-                            println("onMessage : $msgString")
+                override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("onClosed code:$code, reason:$reason")
+                }
 
-                            val msg = msgString.toSignalMessage() as SignalMessage.roomCreated
-                            Assert.assertEquals("abc", msg.name)
-                            callerWs?.close(1000, "")
-                            countDown()
-                        }
-                    })
-
+                override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response?) {
+                    println("onFailure t:$t, response:$response")
+                    t.printStackTrace()
+                }
+            }
+            )
         }
     }
 
     @Test
     fun chat() {
-        latch(5000) {
+        latch(1, 5000) {
+            okHttpClient.newWebSocket(Request.Builder().url(url).build(), object : okhttp3.WebSocketListener() {
+                override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
+                    println("1onOpen : $webSocket : $response")
+                    webSocket.send(SignalMessage.room("abc2").toJsonString())
+                }
 
-            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                    .enqueue(object : WebSocketListener {
-                        var callerWs: WebSocket? = null
-                        override fun onOpen(webSocket: WebSocket, response: Response) {
-                            println("1onOpen : $webSocket : $response")
-                            callerWs = webSocket
-                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
+                override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                    println("1onMessage 0x1 text:$text")
+                    val msg = text.toSignalMessage()
+                    when (msg) {
+                        is SignalMessage.startAsCaller -> {
+                            webSocket.send(SignalMessage.chat("hi").toJsonString())
+                            webSocket.close(1000, "")
                         }
+                    }
+                }
 
-                        override fun onPong(payload: okio.Buffer?) {
+                override fun onMessage(webSocket: okhttp3.WebSocket, bytes: ByteString) {
+                    println("1onMessage 0x2 bytes:$bytes")
+                }
+
+                override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("1onClosing code:$code, reason:$reason")
+                    webSocket.close(1000, null)
+                }
+
+                override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("1onClosed code:$code, reason:$reason")
+                }
+
+                override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response?) {
+                    println("1onFailure t:$t, response:$response")
+                    t.printStackTrace()
+                }
+            }
+            )
+
+            Thread.sleep(1000)
+
+            okHttpClient.newWebSocket(Request.Builder().url(url).build(), object : okhttp3.WebSocketListener() {
+                override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
+                    println("2onOpen : $webSocket : $response")
+                    webSocket.send(SignalMessage.room("abc2").toJsonString())
+                }
+
+                override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                    println("2onMessage 0x1 text:$text")
+                    val msg = text.toSignalMessage()
+                    when (msg) {
+                        is SignalMessage.chat -> {
+                            Assert.assertEquals(msg.message, "hi")
+                            webSocket.close(1000, "")
+                            countDown()
                         }
+                    }
+                }
 
-                        override fun onClose(code: Int, reason: String?) {
-                            println("1onClosed : $code : $reason")
-                        }
+                override fun onMessage(webSocket: okhttp3.WebSocket, bytes: ByteString) {
+                    println("2onMessage 0x2 bytes:$bytes")
+                }
 
-                        override fun onFailure(e: IOException?, response: Response?) {
-                            println("1onFailure : $e : $response")
-                            Assert.fail(e?.message)
-                        }
+                override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("2onClosing code:$code, reason:$reason")
+                    webSocket.close(1000, null)
+                }
 
-                        override fun onMessage(resBody: ResponseBody?) {
-                            val msgString = resBody?.string() ?: ""
-                            println("1onMessage : $msgString")
+                override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                    println("2onClosed code:$code, reason:$reason")
+                }
 
-                            val msg = msgString.toSignalMessage()
-                            when (msg) {
-                                is SignalMessage.startAsCaller -> {
-                                    callerWs!!.sendMessage(
-                                            RequestBody.create(WebSocket.TEXT, SignalMessage.chat("hi").toJsonString())
-                                    )
-                                    callerWs!!.close(1000, "")
-                                }
-                            }
-                        }
-                    })
-
-            Thread.sleep(500)
-
-            WebSocketCall.create(okHttpClient, Request.Builder().url(url).build())
-                    .enqueue(object : WebSocketListener {
-                        var callerWs: WebSocket? = null
-                        override fun onOpen(webSocket: WebSocket, response: Response) {
-                            println("2onOpen : $webSocket : $response")
-                            callerWs = webSocket
-                            webSocket.sendMessage(RequestBody.create(WebSocket.TEXT, SignalMessage.room("abc2").toJsonString()))
-                        }
-
-                        override fun onPong(payload: okio.Buffer?) {
-                        }
-
-                        override fun onClose(code: Int, reason: String?) {
-                            println("2onClosed : $code : $reason")
-                        }
-
-                        override fun onFailure(e: IOException?, response: Response?) {
-                            println("2onFailure : $e : $response")
-                            Assert.fail(e?.message)
-                        }
-
-                        override fun onMessage(resBody: ResponseBody?) {
-                            val msgString = resBody?.string() ?: ""
-                            println("2onMessage : $msgString")
-
-                            val msg = msgString.toSignalMessage()
-                            when (msg) {
-                                is SignalMessage.chat -> {
-                                    Assert.assertEquals(msg.message, "hi")
-                                    callerWs!!.close(1000, "")
-                                    countDown()
-                                }
-                            }
-                        }
-                    })
-
+                override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response?) {
+                    println("2onFailure t:$t, response:$response")
+                    t.printStackTrace()
+                }
+            }
+            )
         }
     }
 }
